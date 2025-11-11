@@ -20,3 +20,10 @@ char** tokenize(char* cmdline);
 int execute(char** arglist);
 
 #endif // SHELL_H
+#define HISTORY_SIZE 20
+
+void add_to_history(const char* cmd);
+void print_history();
+char* get_history_command(int index);
+
+
