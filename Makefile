@@ -1,14 +1,18 @@
-CC=gcc
-CFLAGS=-Iinclude -Wall
-SRC=$(wildcard src/*.c)
-OBJ=$(SRC:.c=.o)
-BIN=bin/myshell
+CC = gcc
+CFLAGS = -Wall -g -Iinclude
+
+SRC = src/main_builtins.c src/shell.c src/execute.c
+OBJ = $(SRC:.c=.o)
+BIN = bin/myshell
 
 all: $(BIN)
 
 $(BIN): $(OBJ)
-	mkdir -p bin
 	$(CC) $(CFLAGS) -o $(BIN) $(OBJ)
 
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
 clean:
-	rm -f src/*.o $(BIN)
+	rm -f $(OBJ) $(BIN)
+
