@@ -1,4 +1,3 @@
 all:
-    mkdir -p bin
-    gcc -o bin/myshell src/main_history.c src/shell.c src/execute.c -Wall
-
+	mkdir -p bin
+	gcc -Iinclude -o bin/myshell src/main_history.c src/shell.c src/execute.c -Wall

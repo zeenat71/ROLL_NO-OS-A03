@@ -1,98 +1,82 @@
 #include "shell.h"
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <ctype.h>
+#include <unistd.h>
 
-#define HISTORY_SIZE 20
-
-// History storage
-static char* history[HISTORY_SIZE];
-static int history_count = 0;
-
-// Add command to history
-void add_to_history(const char* cmd) {
-    if(history_count < HISTORY_SIZE) {
-        history[history_count++] = strdup(cmd);
-    } else {
-        free(history[0]);
-        for(int i = 1; i < HISTORY_SIZE; i++) {
-            history[i-1] = history[i];
-        }
-        history[HISTORY_SIZE-1] = strdup(cmd);
-    }
-}
-
-// Print history commands
-void print_history() {
-    for(int i = 0; i < history_count; i++) {
-        printf("%d %s\n", i+1, history[i]);
-    }
-}
-
-// Get command from history by number
-char* get_history_command(int index) {
-    if(index < 1 || index > history_count) return NULL;
-    return history[index-1];
-}
-
-// Built-in commands
+// Built-in commands handler
 int handle_builtin(char** arglist) {
-    if(arglist == NULL || arglist[0] == NULL) return 0;
+    if (arglist[0] == NULL) return 0;
 
-    if(strcmp(arglist[0], "exit") == 0) {
+    // exit command
+    if (strcmp(arglist[0], "exit") == 0) {
         exit(0);
-    } else if(strcmp(arglist[0], "cd") == 0) {
-        if(arglist[1] == NULL || chdir(arglist[1]) != 0) {
-            perror("cd failed");
+    } 
+    // cd command
+    else if (strcmp(arglist[0], "cd") == 0) {
+        if (arglist[1] == NULL) {
+            fprintf(stderr, "cd: missing argument\n");
+        } else if (chdir(arglist[1]) != 0) {
+            perror("cd");
         }
         return 1;
-    } else if(strcmp(arglist[0], "help") == 0) {
+    } 
+    // help command
+    else if (strcmp(arglist[0], "help") == 0) {
         printf("Built-in commands:\n");
-        printf("cd <dir>\nexit\nhelp\njobs\nhistory\n!n (re-execute command)\n");
+        printf("exit    - exit the shell\n");
+        printf("cd DIR  - change directory to DIR\n");
+        printf("help    - show this help message\n");
+        printf("history - show last %d commands\n", HISTORY_SIZE);
+        printf("!n      - execute the nth command from history\n");
         return 1;
-    } else if(strcmp(arglist[0], "jobs") == 0) {
-        printf("Job control not yet implemented\n");
-        return 1;
-    } else if(strcmp(arglist[0], "history") == 0) {
+    } 
+    // history command
+    else if (strcmp(arglist[0], "history") == 0) {
         print_history();
         return 1;
     }
-    return 0;
+
+    return 0; // not a builtin
 }
 
-// Main loop
+// Main shell loop
 int main() {
     char* cmdline;
     char** arglist;
 
-    while((cmdline = read_cmd(PROMPT, stdin)) != NULL) {
+    while ((cmdline = read_cmd(PROMPT, stdin)) != NULL) {
 
-        // Handle !n re-execute
-        if(cmdline[0] == '!') {
-            int n = atoi(&cmdline[1]);
+        // Handle !n command
+        if (cmdline[0] == '!') {
+            int n = atoi(cmdline + 1);
             char* hist_cmd = get_history_command(n);
-            if(hist_cmd) {
-                free(cmdline);
-                cmdline = strdup(hist_cmd);
-                printf("%s\n", cmdline);
-            } else {
-                printf("No such command in history\n");
+            if (hist_cmd == NULL) {
+                printf("No such command in history.\n");
                 free(cmdline);
                 continue;
             }
+            free(cmdline);
+            cmdline = strdup(hist_cmd);
+            printf("%s\n", cmdline); // show the command being executed
         }
 
         // Add to history
-        if(cmdline[0] != '\0') add_to_history(cmdline);
+        add_to_history(cmdline);
 
-        if((arglist = tokenize(cmdline)) != NULL) {
+        // Tokenize command
+        if ((arglist = tokenize(cmdline)) != NULL) {
 
-            if(!handle_builtin(arglist)) {
+            // Check built-ins
+            if (!handle_builtin(arglist)) {
+                // Execute external command
                 execute(arglist);
             }
 
-            for(int i = 0; arglist[i] != NULL; i++) free(arglist[i]);
+            // Free tokenized args
+            for (int i = 0; arglist[i] != NULL; i++)
+                free(arglist[i]);
             free(arglist);
         }
 
